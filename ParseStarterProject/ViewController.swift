@@ -64,8 +64,14 @@ class ViewController: UIViewController, UITextFieldDelegate {
                 
                     if success == true {
                         
-                       self.performSegueWithIdentifier("loginRider", sender: self)
-                    
+                        if self.`switch`.on == true {
+                            
+                            self.performSegueWithIdentifier("loginDriver", sender: self)
+                        }
+                        else {
+                        
+                            self.performSegueWithIdentifier("loginRider", sender: self)
+                        }
                     }
                 
                     else    {
@@ -86,11 +92,18 @@ class ViewController: UIViewController, UITextFieldDelegate {
                 
                 PFUser.logInWithUsernameInBackground(username.text!, password: password.text!, block: { (user, error) in
                     
-                    if user != nil {
+                    if let user = user {
                         
                         // Successful login
                         
-                        self.performSegueWithIdentifier("loginRider", sender: self)
+                        if user["isDriver"]! as! Bool == true {
+                            
+                            self.performSegueWithIdentifier("loginDriver", sender: self)
+                        }
+                        else {
+                            
+                            self.performSegueWithIdentifier("loginRider", sender: self)
+                        }
                     }
                     else {
                         
@@ -147,7 +160,14 @@ class ViewController: UIViewController, UITextFieldDelegate {
         
         if PFUser.currentUser()?.username != nil {
         
-            performSegueWithIdentifier("loginRider", sender: self)
+            if PFUser.currentUser()?["isDriver"]! as! Bool == true {
+        
+                performSegueWithIdentifier("loginDriver", sender: self)
+            }
+            else {
+            
+                performSegueWithIdentifier("loginRider", sender: self)
+            }
         }
     }
     
