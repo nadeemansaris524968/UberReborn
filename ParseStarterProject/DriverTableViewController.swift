@@ -15,43 +15,96 @@ class DriverTableViewController: UITableViewController, CLLocationManagerDelegat
     var usernames = [String]()
     
     var locations = [CLLocationCoordinate2D]()
+    
+    var locationManager: CLLocationManager!
+    
+    var latitude: CLLocationDegrees = 0
+    
+    var longitude: CLLocationDegrees = 0
+    
+    var distances = [CLLocationDistance]()
+    
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        locationManager = CLLocationManager()
+        locationManager.delegate = self
+        locationManager.desiredAccuracy = kCLLocationAccuracyBest
+        
+        if #available(iOS 8.0, *) {
+            locationManager.requestWhenInUseAuthorization()
+        } else {
+            // Fallback on earlier versions
+        }
+        
+        locationManager.startUpdatingLocation()
 
+        
+    }
+    
+    func locationManager(manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+        
+        let location: CLLocationCoordinate2D = manager.location!.coordinate
+        
+        latitude = location.latitude
+        
+        longitude = location.longitude
+        
         let query = PFQuery(className: "riderRequest")
+        
+        query.whereKey("location", nearGeoPoint: PFGeoPoint(latitude: location.latitude, longitude: location.longitude))
+        
+        query.limit = 10
         
         query.findObjectsInBackgroundWithBlock({ (objects, error) in
             
             if error == nil {
                 
-                print("Successfully retrieved \(objects!.count) objects")
-                
-                if let objects = objects! as? [PFObject]{
+                if let objects = objects! as? [PFObject]   {
+                    
+                    self.usernames.removeAll(keepCapacity: true)
+                    
+                    self.locations.removeAll(keepCapacity: true)
                     
                     for object in objects {
                         
-                        if let username = object["username"] as? String {
-                            
-                            self.usernames.append(username)
-                            
-                        }
+                        if object["driverResponded"] == nil {
                         
-                        if let location = object["location"] as? PFGeoPoint {
+                            if let username = object["username"] as? String {
                             
-                            self.locations.append(CLLocationCoordinate2DMake(location.latitude, location.longitude))
-                        }
+                                self.usernames.append(username)
+                            
+                            }
                         
-                        print(self.locations)
-                        print(self.usernames)
+                            if let returnedLocation = object["location"] as? PFGeoPoint {
+                            
+                                let requestLocation = CLLocationCoordinate2DMake(returnedLocation.latitude, returnedLocation.longitude)
+                            
+                                self.locations.append(requestLocation)
+                            
+                                let requestCLLocation = CLLocation(latitude: requestLocation.latitude, longitude: requestLocation.longitude)
+                            
+                                let driverCLLocation = CLLocation(latitude: location.latitude, longitude: location.longitude)
+                            
+                                let distance = driverCLLocation.distanceFromLocation(requestCLLocation)
+                            
+                                self.distances.append(distance/1000)
+                            }
+                        }
+                    
                     }
+                        self.tableView.reloadData()
                 }
             }
             else {
                 print("Error: \(error?.userInfo["error"])")
             }
         })
+        
     }
+    
+    
 
     override func didReceiveMemoryWarning() {
         super.didReceiveMemoryWarning()
@@ -67,63 +120,18 @@ class DriverTableViewController: UITableViewController, CLLocationManagerDelegat
 
     override func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         // #warning Incomplete implementation, return the number of rows
-        return 3
+        return usernames.count
     }
 
     
     override func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCellWithIdentifier("cell", forIndexPath: indexPath)
 
-        cell.textLabel?.text = "Test"
-
+        cell.textLabel?.text = usernames[indexPath.row] + " - " + String(format: "%.1f", distances[indexPath.row]) + "kms away"
+        
         return cell
     }
  
-
-    /*
-    // Override to support conditional editing of the table view.
-    override func tableView(tableView: UITableView, canEditRowAtIndexPath indexPath: NSIndexPath) -> Bool {
-        // Return false if you do not want the specified item to be editable.
-        return true
-    }
-    */
-
-    /*
-    // Override to support editing the table view.
-    override func tableView(tableView: UITableView, commitEditingStyle editingStyle: UITableViewCellEditingStyle, forRowAtIndexPath indexPath: NSIndexPath) {
-        if editingStyle == .Delete {
-            // Delete the row from the data source
-            tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade)
-        } else if editingStyle == .Insert {
-            // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
-        }    
-    }
-    */
-
-    /*
-    // Override to support rearranging the table view.
-    override func tableView(tableView: UITableView, moveRowAtIndexPath fromIndexPath: NSIndexPath, toIndexPath: NSIndexPath) {
-
-    }
-    */
-
-    /*
-    // Override to support conditional rearranging of the table view.
-    override func tableView(tableView: UITableView, canMoveRowAtIndexPath indexPath: NSIndexPath) -> Bool {
-        // Return false if you do not want the item to be re-orderable.
-        return true
-    }
-    */
-
-    /*
-    // MARK: - Navigation
-
-    // In a storyboard-based application, you will often want to do a little preparation before navigation
-    override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
-        // Get the new view controller using segue.destinationViewController.
-        // Pass the selected object to the new view controller.
-    }
-    */
 
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         
@@ -132,6 +140,18 @@ class DriverTableViewController: UITableViewController, CLLocationManagerDelegat
             navigationController?.setNavigationBarHidden(navigationController?.navigationBarHidden == false, animated: false)
             
             PFUser.logOut()
+        }
+        
+        if segue.identifier == "showViewRequests" {
+            
+            if let destination = segue.destinationViewController as? RequestViewController {
+                
+                destination.requestLocation = locations[(tableView.indexPathForSelectedRow?.row)!]
+                
+                destination.requestUsername = usernames[(tableView.indexPathForSelectedRow?.row)!]
+                
+            }
+            
         }
     }
     
