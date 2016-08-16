@@ -127,6 +127,28 @@ class RiderViewController: UIViewController, CLLocationManagerDelegate, MKMapVie
         
         longitude = location.longitude
         
+        let query = PFQuery(className: "riderRequest")
+        query.whereKey("username", equalTo: (PFUser.currentUser()?.username)!)
+        query.findObjectsInBackgroundWithBlock { (objects, error) in
+            
+            if error == nil {
+                if let objects = objects! as [PFObject]! {
+                    for object in objects {
+                        print("riderRequest found")
+                    }
+                }
+            }
+            
+        }
+        
+        
+        
+        
+        
+        
+        
+        
+        
         let center = CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)
         
         let region = MKCoordinateRegion(center: center, span: MKCoordinateSpan(latitudeDelta: 0.01, longitudeDelta: 0.01))
@@ -150,6 +172,8 @@ class RiderViewController: UIViewController, CLLocationManagerDelegate, MKMapVie
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         
         if segue.identifier == "logoutRider" {
+            
+            locationManager.stopUpdatingLocation()
             
             PFUser.logOut()
         }

@@ -186,6 +186,8 @@ class DriverTableViewController: UITableViewController, CLLocationManagerDelegat
         
         if segue.identifier == "logoutDriver" {
             
+            locationManager.stopUpdatingLocation()
+            
             navigationController?.setNavigationBarHidden(navigationController?.navigationBarHidden == false, animated: false)
             
             PFUser.logOut()
