@@ -51,7 +51,56 @@ class DriverTableViewController: UITableViewController, CLLocationManagerDelegat
         
         longitude = location.longitude
         
-        let query = PFQuery(className: "riderRequest")
+        print("Lat: \(latitude), Lon: \(longitude)")
+        
+        var query = PFQuery(className: "driverLocation")
+        
+        query.whereKey("username", equalTo: (PFUser.currentUser()?.username)!)
+        
+        query.findObjectsInBackgroundWithBlock { (objects, error) in
+            
+            if error == nil {
+                
+                if let objects = objects! as [PFObject]! {
+                    
+                    if objects.count > 0 {
+                    
+                    for object in objects {
+                        
+                        var query = PFQuery(className: "driverLocation")
+                        query.getObjectInBackgroundWithId( object.objectId!, block: { (object, error) in
+                            
+                            if error != nil {
+                                print(error)
+                            }
+                            else if let object = object {
+                                object["driverLocation"] = PFGeoPoint(latitude: location.latitude, longitude: location.longitude)
+                                object.saveInBackground()
+                            }
+                            
+                        })
+                        
+                    }
+                }
+                    else {
+                        var driverLocation = PFObject(className: "driverLocation")
+                        driverLocation["username"] = PFUser.currentUser()?.username
+                        driverLocation["driverLocation"] = PFGeoPoint(latitude: location.latitude, longitude: location.latitude)
+                        
+                        driverLocation.saveInBackground()
+                    }
+                    
+                }
+                
+            }
+            
+            else {
+                print(error)
+            }
+            
+        }
+        
+        query = PFQuery(className: "riderRequest")
         
         query.whereKey("location", nearGeoPoint: PFGeoPoint(latitude: location.latitude, longitude: location.longitude))
         
